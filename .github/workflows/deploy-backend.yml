@@ -1,0 +1,59 @@
+name: "Deploy Backend to Azure VM"
+
+on:
+  workflow_dispatch:
+    inputs:
+      vm_ip:
+        description: "The Public IP of the Azure Virtual Machine"
+        required: true
+        type: string
+
+jobs:
+  deploy-backend:
+    name: "Copy Files and Run Docker"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # 1. Copy the backend files from GitHub directly to the VM
+      - name: Copy backend files to VM
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ inputs.vm_ip }}
+          username: vmadmin
+          key: ${{ secrets.VM_SSH_PRIVATE_KEY }}
+          source: "backend/,docker-compose.yml"
+          target: "~/app"
+
+      # 2. SSH into the VM, check for Docker, and run the app
+      - name: Execute deployment scripts
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ inputs.vm_ip }}
+          username: vmadmin
+          key: ${{ secrets.VM_SSH_PRIVATE_KEY }}
+          script: |
+            echo "Connected to VM successfully."
+
+            # Check if docker is installed, if not, install it
+            if ! command -v docker &> /dev/null; then
+              echo "Docker not found. Installing Docker and Docker Compose..."
+              sudo apt-get update
+              sudo apt-get install -y docker.io docker-compose
+              # Add user to docker group so you don't always need sudo
+              sudo usermod -aG docker $USER
+            else
+              echo "Docker is already installed."
+            fi
+
+            # Navigate to the folder where we copied the files
+            cd ~/app
+
+            # Tear down the old containers and spin up the new ones
+            echo "Building and deploying new containers..."
+            sudo docker-compose down
+            sudo docker-compose up --build -d
+
+            echo "Backend deployment complete!"

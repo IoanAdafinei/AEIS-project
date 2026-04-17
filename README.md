@@ -1,0 +1,1 @@
+Project to show a basic architecture of an enterprise system
