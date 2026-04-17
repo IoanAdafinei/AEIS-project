@@ -1,0 +1,7 @@
+application_name = "AEIS-Project"
+primary_region   = "northeurope"
+public_key       = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDmJAL6XogNePOB/aaUYgz5Cv2RXkqpK9h+JKnHoIUpW AEIS-VM-key"
+
+environment = "test"
+vm_size     = "Standard_B1s"
+vm_count    = 1
