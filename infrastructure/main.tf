@@ -30,7 +30,7 @@ resource "azurerm_subnet" "main" {
 
 resource "azurerm_public_ip" "pip" {
   count               = var.vm_count
-  name                = "pip-vm-${var.environment}-${count.index}"
+  name                = "pip-vm-${var.environment}-${count.index + 1}"
   resource_group_name = azurerm_resource_group.main.name
   location            = azurerm_resource_group.main.location
   allocation_method   = "Static"
@@ -43,7 +43,7 @@ resource "azurerm_public_ip" "pip" {
 
 resource "azurerm_network_interface" "nic" {
   count               = var.vm_count
-  name                = "nic-vm-${var.environment}-${count.index}"
+  name                = "nic-vm-${var.environment}-${count.index + 1}"
   location            = azurerm_resource_group.main.location
   resource_group_name = azurerm_resource_group.main.name
 
@@ -64,7 +64,7 @@ resource "azurerm_network_interface" "nic" {
 
 resource "azurerm_network_security_group" "nsg" {
   count               = var.vm_count
-  name                = "nsg-vm-${var.environment}-${count.index}"
+  name                = "nsg-vm-${var.environment}-${count.index + 1}"
   location            = azurerm_resource_group.main.location
   resource_group_name = azurerm_resource_group.main.name
 
@@ -76,6 +76,18 @@ resource "azurerm_network_security_group" "nsg" {
     protocol                   = "Tcp"
     source_port_range          = "*"
     destination_port_range     = "22"
+    source_address_prefix      = "*"
+    destination_address_prefix = "*"
+  }
+
+  security_rule {
+    name                       = "allowInboundToBackend"
+    priority                   = 110
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "8000" // to be changed based on the actual backend application port
     source_address_prefix      = "*"
     destination_address_prefix = "*"
   }
@@ -94,7 +106,7 @@ resource "azurerm_network_interface_security_group_association" "nic-nsg-assoc" 
 
 resource "azurerm_linux_virtual_machine" "vm" {
   count               = var.vm_count
-  name                = "vm-${var.environment}-${count.index}"
+  name                = "vm-${var.environment}-${count.index + 1}"
   resource_group_name = azurerm_resource_group.main.name
   location            = azurerm_resource_group.main.location
   size                = var.vm_size
@@ -132,4 +144,23 @@ resource "azurerm_storage_account" "datalake" {
   location                 = azurerm_resource_group.main.location
   account_tier             = "Standard"
   account_replication_type = "LRS"
+
+  tags = {
+    Created_By  = "Terraform"
+    environment = "${var.environment}"
+  }
+}
+
+
+resource "azurerm_static_web_app" "frontend" {
+  name                = "swa-${var.application_name}-${var.environment}"
+  resource_group_name = azurerm_resource_group.main.name
+  location            = "westeurope"
+  sku_tier            = "Free"
+  sku_size            = "Free"
+
+  tags = {
+    Created_By  = "Terraform"
+    environment = "${var.environment}"
+  }
 }
