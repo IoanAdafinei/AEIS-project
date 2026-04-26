@@ -7,6 +7,10 @@ on:
         description: "The Public IP of the Azure Virtual Machine"
         required: true
         type: string
+      azure_storage_connection_string:
+        description: "Azure Storage Connection String"
+        required: true
+        type: string
 
 jobs:
   deploy-backend:
@@ -17,6 +21,14 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      # 0. Create .env file for Docker
+      - name: Create .env file for Docker
+        run: |
+          # Create the file inside the backend folder so it sits next to docker-compose.yml
+          echo "CDSE_CLIENT_ID=${{ secrets.CDSE_CLIENT_ID }}" > backend/.env
+          echo "CDSE_CLIENT_SECRET=${{ secrets.CDSE_CLIENT_SECRET }}" >> backend/.env
+          echo "AZURE_STORAGE_CONNECTION_STRING=${{ inputs.azure_storage_connection_string }}" >> backend/.env
+
       # 1. Copy the backend files from GitHub directly to the VM
       - name: Copy backend files to VM
         uses: appleboy/scp-action@v0.1.7
@@ -24,7 +36,7 @@ jobs:
           host: ${{ inputs.vm_ip }}
           username: vmadmin
           key: ${{ secrets.VM_SSH_PRIVATE_KEY }}
-          source: "backend/,docker-compose.yml"
+          source: "backend/processor,backend/docker-compose.yml,backend/.env"
           target: "~/app"
 
       # 2. SSH into the VM, check for Docker, and run the app

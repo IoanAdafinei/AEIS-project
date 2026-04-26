@@ -4,7 +4,15 @@ on:
   workflow_dispatch:
     inputs:
       deployment_token:
-        description: "Azure Static Web App API Key (Get from Azure Portal or CLI)"
+        description: "Azure Static Web App API Token"
+        required: true
+        type: string
+      function_name:
+        description: "Azure Function Name (e.g., 'func-satellite-test' without the URL)"
+        required: true
+        type: string
+      vm_ip:
+        description: "Backend VM IP Address (e.g., '192.168.1.50')"
         required: true
         type: string
 
@@ -25,4 +33,10 @@ jobs:
           action: "upload"
           app_location: "/frontend"
           api_location: ""
-          output_location: ""
+          output_location: "dist"
+
+        env:
+          VITE_INGESTION_API: "https://${{ inputs.function_name
+            }}.azurewebsites.net/api/QueryCopernicusAPI"
+          VITE_PROCESSOR_API: "http://${{ inputs.vm_ip }}:8000/process"
+          VITE_WS_API: "ws://${{ inputs.vm_ip }}:8000/ws"

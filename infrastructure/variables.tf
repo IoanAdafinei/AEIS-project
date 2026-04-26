@@ -30,3 +30,9 @@ variable "vm_count" {
   type        = number
   default     = 1
 }
+
+variable "db_admin_password" {
+  description = "The password for the PostgreSQL administrator"
+  type        = string
+  sensitive   = true
+}
