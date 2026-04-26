@@ -38,5 +38,5 @@ jobs:
         env:
           VITE_INGESTION_API: "https://${{ inputs.function_name
             }}.azurewebsites.net/api/QueryCopernicusAPI"
-          VITE_PROCESSOR_API: "https://${{ inputs.vm_ip }}:8000/process"
-          VITE_WS_API: "wss://${{ inputs.vm_ip }}:8000/ws"
+          VITE_PROCESSOR_API: "http://${{ inputs.vm_ip }}:8000/process"
+          VITE_WS_API: "ws://${{ inputs.vm_ip }}:8000/ws"
