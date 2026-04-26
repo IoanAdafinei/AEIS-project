@@ -48,7 +48,6 @@ jobs:
           key: ${{ secrets.VM_SSH_PRIVATE_KEY }}
           script: |
             echo "Connected to VM successfully."
-
             # Check if docker is installed, if not, install it
             if ! command -v docker &> /dev/null; then
               echo "Docker not found. Installing Docker and Docker Compose..."
@@ -61,7 +60,7 @@ jobs:
             fi
 
             # Navigate to the folder where we copied the files
-            cd ~/app
+            cd ~/app/backend
 
             # Tear down the old containers and spin up the new ones
             echo "Building and deploying new containers..."
