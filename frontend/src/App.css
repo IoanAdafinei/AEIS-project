@@ -1,0 +1,50 @@
+/* Darken the Zoom In / Zoom Out buttons */
+.leaflet-bar a, 
+.leaflet-bar a:hover {
+    background-color: #1f2937 !important; /* Tailwind gray-800 */
+    color: #9ca3af !important; /* Tailwind gray-400 */
+    border-bottom: 1px solid #374151 !important; /* Tailwind gray-700 */
+    transition: all 0.2s ease;
+}
+
+.leaflet-bar a:hover {
+    background-color: #374151 !important; /* Tailwind gray-700 */
+    color: #fff !important;
+}
+
+/* Remove the harsh border around the zoom controls */
+.leaflet-control-zoom {
+    border: 1px solid #374151 !important;
+    border-radius: 6px !important;
+    overflow: hidden;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Darken the Attribution bar at the bottom right */
+.leaflet-control-attribution {
+    background-color: rgba(17, 24, 39, 0.75) !important; /* Tailwind gray-900 with opacity */
+    color: #6b7280 !important; /* Tailwind gray-500 */
+    backdrop-filter: blur(4px);
+    border-top-left-radius: 6px;
+    padding: 2px 8px !important;
+}
+
+.leaflet-control-attribution a {
+    color: #3b82f6 !important; /* Tailwind blue-500 */
+    text-decoration: none;
+}
+
+.leaflet-control-attribution a:hover {
+    color: #60a5fa !important; /* Tailwind blue-400 */
+    text-decoration: underline;
+}
+
+/* Make the drawn bounding box pulse slightly when hovered */
+path.leaflet-interactive {
+    transition: fill-opacity 0.2s ease-in-out, stroke-width 0.2s ease-in-out;
+}
+
+path.leaflet-interactive:hover {
+    fill-opacity: 0.3 !important; /* Makes the blue fill slightly darker on hover */
+    stroke-width: 3px !important;
+}

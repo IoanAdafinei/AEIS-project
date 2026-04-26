@@ -1,54 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Satellite Analysis Dashboard</title>
-    <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; color: #333; text-align: center; padding: 50px; }
-        .container { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); max-width: 600px; margin: 0 auto; }
-        button { background-color: #0078D4; color: white; border: none; padding: 10px 20px; font-size: 16px; border-radius: 5px; cursor: pointer; margin-top: 20px;}
-        button:hover { background-color: #005a9e; }
-        input { padding: 10px; font-size: 16px; width: 80%; margin-top: 10px; border: 1px solid #ccc; border-radius: 5px;}
-        pre { background: #eee; padding: 15px; border-radius: 5px; text-align: left; overflow-x: auto; margin-top: 20px;}
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>🛰️ Sentinel Processing Hub</h1>
-        <p>Frontend successfully hosted on Azure Static Web Apps!</p>
-
-        <hr>
-
-        <h3>Test Backend Connection</h3>
-        <p>Enter the Public IP of your Azure Virtual Machine:</p>
-        <input type="text" id="vm-ip" placeholder="e.g., 20.123.45.67">
-        <br>
-        <button onclick="testBackend()">Ping Big Data Cluster</button>
-
-        <pre id="result">Awaiting input...</pre>
-    </div>
-
-    <script>
-        async function testBackend() {
-            const ip = document.getElementById('vm-ip').value.trim();
-            const resultBox = document.getElementById('result');
-
-            if (!ip) {
-                resultBox.innerText = "Please enter an IP address.";
-                return;
-            }
-
-            resultBox.innerText = "Pinging http://" + ip + ":8000/ ...";
-
-            try {
-                const response = await fetch("http://" + ip + ":8000");
-                const data = await response.json();
-                resultBox.innerText = "✅ Success!\n\n" + JSON.stringify(data, null, 2);
-            } catch (error) {
-                resultBox.innerText = "❌ Connection Failed.\nMake sure the VM is running, Docker is up, and Port 8000 is open in the Azure Network Security Group.";
-            }
-        }
-    </script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/satellite-variant.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <meta name="referrer" content="origin" />
+    
+    <title>Satellite Orchestrator</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
 </html>
