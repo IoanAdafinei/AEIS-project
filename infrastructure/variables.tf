@@ -36,3 +36,14 @@ variable "db_admin_password" {
   type        = string
   sensitive   = true
 }
+
+variable "copernicus_client_id" {
+  description = "The client ID for the Copernicus API"
+  type        = string
+}
+
+variable "copernicus_client_secret" {
+  description = "The client secret for the Copernicus API"
+  type        = string
+  sensitive   = true
+}
