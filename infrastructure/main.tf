@@ -172,6 +172,7 @@ resource "azurerm_postgresql_flexible_server" "postgres" {
   version                = "16"
   administrator_login    = "psqladmin"
   administrator_password = var.db_admin_password
+  zone                   = "3"
 
   storage_mb   = 32768 # 32GB is the default for B1ms free tier
   storage_tier = "P4"
@@ -243,6 +244,8 @@ resource "azurerm_linux_function_app" "ingestion_func" {
 
   app_settings = {
     "POSTGRES_CONNECTION_STRING" = "postgresql://psqladmin:${var.db_admin_password}@${azurerm_postgresql_flexible_server.postgres.fqdn}:5432/satellite_metadata"
+    "CDSE_CLIENT_ID"             = "${var.copernicus_client_id}"
+    "CDSE_CLIENT_SECRET"         = "${var.copernicus_client_secret}"
   }
 
   tags = {
