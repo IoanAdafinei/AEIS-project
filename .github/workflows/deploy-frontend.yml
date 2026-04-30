@@ -11,8 +11,9 @@ on:
         description: "Azure Function Name (e.g., 'func-satellite-test' without the URL)"
         required: true
         type: string
-      vm_ip:
-        description: "Backend VM IP Address (e.g., '192.168.1.50')"
+      vm_fqdn:
+        description: "Backend VM Fully Qualified Domain Name (e.g.,
+          'backend-satellite-processor.northeurope.cloudapp.azure.com')"
         required: true
         type: string
 
@@ -38,5 +39,5 @@ jobs:
         env:
           VITE_INGESTION_API: "https://${{ inputs.function_name
             }}.azurewebsites.net/api/QueryCopernicusAPI"
-          VITE_PROCESSOR_API: "http://${{ inputs.vm_ip }}:8000/process"
-          VITE_WS_API: "ws://${{ inputs.vm_ip }}:8000/ws"
+          VITE_PROCESSOR_API: "https://${{ inputs.vm_fqdn }}/process"
+          VITE_WS_API: "wss://${{ inputs.vm_fqdn }}/ws"

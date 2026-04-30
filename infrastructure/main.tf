@@ -33,6 +33,7 @@ resource "azurerm_public_ip" "pip" {
   name                = "pip-vm-${var.environment}-${count.index + 1}"
   resource_group_name = azurerm_resource_group.main.name
   location            = azurerm_resource_group.main.location
+  domain_name_label   = "backend-satellite-processor"
   allocation_method   = "Static"
 
   tags = {
@@ -87,7 +88,7 @@ resource "azurerm_network_security_group" "nsg" {
     access                     = "Allow"
     protocol                   = "Tcp"
     source_port_range          = "*"
-    destination_port_range     = "8000"
+    destination_port_range     = "443"
     source_address_prefix      = "*"
     destination_address_prefix = "*"
   }
