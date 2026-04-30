@@ -1,0 +1,62 @@
+---
+- name: Install Nginx
+  ansible.builtin.apt:
+    name: nginx
+    state: present
+    update_cache: yes
+
+- name: Deploy Nginx configuration from template
+  ansible.builtin.template:
+    src: fastapi_nginx.j2
+    dest: /etc/nginx/sites-available/fastapi
+  notify: Restart Nginx
+
+- name: Enable Nginx configuration (Create Symlink)
+  ansible.builtin.file:
+    src: /etc/nginx/sites-available/fastapi
+    dest: /etc/nginx/sites-enabled/fastapi
+    state: link
+  notify: Restart Nginx
+
+- name: Remove default Nginx configuration
+  ansible.builtin.file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  notify: Restart Nginx
+
+- name: Ensure Let's Encrypt directory exists
+  ansible.builtin.file:
+    path: /etc/letsencrypt
+    state: directory
+    mode: "0755"
+
+- name: Copy Let's Encrypt backup to VM
+  ansible.builtin.copy:
+    src: letsencrypt-backup.tar.gz
+    dest: /tmp/letsencrypt-backup.tar.gz
+    mode: "0600"
+
+- name: Extract SSL certificates
+  ansible.builtin.unarchive:
+    src: /tmp/letsencrypt-backup.tar.gz
+    dest: /
+    remote_src: yes
+
+- name: Clean up temporary backup file
+  ansible.builtin.file:
+    path: /tmp/letsencrypt-backup.tar.gz
+    state: absent
+
+- name: Ensure Snapd is installed (Required for modern Certbot)
+  ansible.builtin.apt:
+    name: snapd
+    state: present
+
+- name: Install Certbot via Snap
+  ansible.builtin.shell: |
+    snap install core
+    snap refresh core
+    snap install --classic certbot
+    ln -sf /snap/bin/certbot /usr/bin/certbot
+  args:
+    creates: /usr/bin/certbot

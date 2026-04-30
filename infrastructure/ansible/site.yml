@@ -1,0 +1,6 @@
+---
+- name: Provision Satellite Backend VM
+  hosts: all
+  become: true
+  roles:
+    - backend_setup

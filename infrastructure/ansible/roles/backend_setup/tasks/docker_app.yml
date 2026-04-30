@@ -1,0 +1,54 @@
+---
+
+- name: Install Docker and Docker Compose
+  ansible.builtin.apt:
+    name:
+      - docker.io
+      - docker-compose
+    state: present
+    update_cache: yes
+
+- name: Add vmadmin to the docker group
+  ansible.builtin.user:
+    name: vmadmin
+    groups: docker
+    append: yes
+
+- name: Ensure backend application directory exists
+  ansible.builtin.file:
+    path: /home/vmadmin/app/backend
+    state: directory
+    owner: vmadmin
+    group: vmadmin
+    mode: "0755"
+
+- name: Copy processor directory to VM
+  ansible.builtin.copy:
+    src: "/home/ioan/facultate/AEIS-project/backend/processor"
+    dest: /home/vmadmin/app/backend/
+    owner: vmadmin
+    group: vmadmin
+
+- name: Copy docker-compose.yml to VM
+  ansible.builtin.copy:
+    src: "/home/ioan/facultate/AEIS-project/backend/docker-compose.yml"
+    dest: /home/vmadmin/app/backend/docker-compose.yml
+    owner: vmadmin
+    group: vmadmin
+
+- name: Generate .env file for Docker
+  ansible.builtin.template:
+    src: docker_env.j2
+    dest: /home/vmadmin/app/backend/.env
+    owner: vmadmin
+    group: vmadmin
+    mode: "0600"
+
+- name: Tear down old containers and build new ones
+  ansible.builtin.shell: |
+    docker-compose down
+    docker-compose up --build -d
+  args:
+    chdir: /home/vmadmin/app/backend
+  async: 600
+  poll: 10
