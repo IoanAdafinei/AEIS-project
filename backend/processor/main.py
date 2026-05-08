@@ -2,7 +2,8 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import requests
-from azure.storage.blob import BlobServiceClient
+from datetime import datetime, timedelta, timezone
+from azure.storage.blob import generate_blob_sas, BlobSasPermissions, BlobServiceClient
 import os
 import logging
 from typing import Dict
@@ -76,6 +77,22 @@ def get_copernicus_token():
     response = requests.post(url, data=data)
     response.raise_for_status()
     return response.json().get("access_token")
+
+
+def get_secure_image_url(blob_name: str) -> str:
+    account_key = dict(item.split("=", 1) for item in AZURE_STORAGE_CONNECTION_STRING.split(";"))["AccountKey"]
+    account_name = dict(item.split("=", 1) for item in AZURE_STORAGE_CONNECTION_STRING.split(";"))["AccountName"]
+
+    sas_token = generate_blob_sas(
+        account_name=account_name,
+        container_name=CONTAINER_NAME,
+        blob_name=blob_name,
+        account_key=account_key,
+        permission=BlobSasPermissions(read=True),
+        expiry=datetime.now(timezone.utc) + timedelta(minutes=15) 
+    )
+    
+    return f"https://{account_name}.blob.core.windows.net/{CONTAINER_NAME}/{blob_name}?{sas_token}"
 
 
 async def process_ndvi_via_sentinel_hub(stac_item_id: str, bbox: list, client_id: str):
@@ -170,9 +187,11 @@ async def process_ndvi_via_sentinel_hub(stac_item_id: str, bbox: list, client_id
         # Upload the raw bytes from the API response
         blob_client.upload_blob(response.content, overwrite=True, blob_type="BlockBlob")
 
+        image_url = get_secure_image_url(blob_name)
+
         await manager.send_message({
             "status": "completed",
-            "image_url": blob_client.url
+            "image_url": image_url
         }, client_id)
         
     except Exception as e:

@@ -1,0 +1,3 @@
+---
+db_user: "psqladmin"
+db_name: "satellite_metadata"

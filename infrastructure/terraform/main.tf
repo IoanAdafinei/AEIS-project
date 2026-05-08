@@ -167,7 +167,7 @@ resource "azurerm_static_web_app" "frontend" {
 }
 
 resource "azurerm_postgresql_flexible_server" "postgres" {
-  name                   = "psql-${var.application_name}-${var.environment}"
+  name                   = "psql-${var.application_name}"
   resource_group_name    = azurerm_resource_group.main.name
   location               = azurerm_resource_group.main.location
   version                = "16"
