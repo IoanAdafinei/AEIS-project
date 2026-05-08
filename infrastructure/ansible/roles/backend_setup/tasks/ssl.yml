@@ -5,6 +5,11 @@
     state: present
     update_cache: yes
 
+- name: Ensure sites-enabled directory exists
+  ansible.builtin.file:
+    path: /etc/nginx/sites-enabled
+    state: directory
+
 - name: Deploy Nginx configuration from template
   ansible.builtin.template:
     src: fastapi_nginx.j2
@@ -16,6 +21,7 @@
     src: /etc/nginx/sites-available/fastapi
     dest: /etc/nginx/sites-enabled/fastapi
     state: link
+    force: true
   notify: Restart Nginx
 
 - name: Remove default Nginx configuration
@@ -30,17 +36,10 @@
     state: directory
     mode: "0755"
 
-- name: Copy Let's Encrypt backup to VM
-  ansible.builtin.copy:
-    src: letsencrypt-backup.tar.gz
-    dest: /tmp/letsencrypt-backup.tar.gz
-    mode: "0600"
-
-- name: Extract SSL certificates
+- name: Copy and extract SSL certificates
   ansible.builtin.unarchive:
-    src: /tmp/letsencrypt-backup.tar.gz
+    src: letsencrypt-backup.tar.gz
     dest: /
-    remote_src: yes
 
 - name: Clean up temporary backup file
   ansible.builtin.file:
