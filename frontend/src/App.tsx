@@ -29,6 +29,20 @@ function MapFixer() {
   return null;
 }
 
+type RightTab = 'map' | 'result';
+
+function MapResizeOnTab({ activeTab }: { activeTab: RightTab }) {
+  const map = useMap();
+  useEffect(() => {
+    if (activeTab !== 'map') return;
+    const timer = setTimeout(() => {
+      map.invalidateSize();
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [activeTab, map]);
+  return null;
+}
+
 function CustomRectangleDraw({
   drawState,
   onBboxChange,
@@ -133,6 +147,11 @@ function App() {
   const [selectedImageId, setSelectedImageId] = useState<string | null>(null)
   const [drawState, setDrawState] = useState<DrawState>('idle')
   const [resultImageUrl, setResultImageUrl] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<RightTab>('map')
+
+  useEffect(() => {
+    if (resultImageUrl) setActiveTab('result');
+  }, [resultImageUrl]);
 
   const handleBboxChange = useCallback((newBbox: [number, number, number, number]) => {
     setBbox(newBbox);
@@ -236,7 +255,7 @@ function App() {
     <div className="absolute inset-0 flex p-8 gap-8 bg-gradient-to-br from-gray-950 via-[#0a0f18] to-black font-mono text-gray-100 overflow-hidden">
 
       {/* --- LEFT SIDEBAR --- */ }
-      <div className="flex flex-col w-[500px] shrink-0 p-8 bg-gray-900/60 backdrop-blur-xl border border-white/10 rounded-2xl overflow-x-hidden overflow-y-auto custom-scrollbar z-10 shadow-2xl relative">
+      <div className="flex flex-col w-[420px] shrink-0 p-8 bg-gray-900/60 backdrop-blur-xl border border-white/10 rounded-2xl overflow-x-hidden overflow-y-auto custom-scrollbar z-10 shadow-2xl relative">
 
         <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-cyan-500 to-transparent opacity-50"></div>
 
@@ -291,21 +310,17 @@ function App() {
 
           <button
             onClick={ handleDrawButtonClick }
-            className={ `w-full text-sm font-bold py-4 rounded-lg mb-6 transition-all duration-300 shadow-lg ${drawButtonConfig.className}` }
+            className={ `w-full text-sm font-bold py-4 rounded-lg mb-4 transition-all duration-300 shadow-lg ${drawButtonConfig.className}` }
           >
             { drawButtonConfig.label }
           </button>
 
-          {/* Embedded Map */ }
-          <div className="rounded-xl overflow-hidden border border-white/10 shadow-[0_0_20px_rgba(0,0,0,0.5)] relative group" style={ { height: '350px', width: '100%' } }>
-            <MapContainer center={ [45.85, 24.89] } zoom={ 5 } style={ { height: '100%', width: '100%', backgroundColor: '#fff' } } zoomControl={ true }>
-              <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              />
-              <MapFixer />
-              <CustomRectangleDraw drawState={ drawState } onBboxChange={ handleBboxChange } onDrawEnd={ handleDrawEnd } />
-            </MapContainer>
+          {/* Map hint (the actual map lives in the right panel now) */ }
+          <div
+            onClick={ () => setActiveTab('map') }
+            className="rounded-lg border border-cyan-500/20 bg-cyan-500/5 px-4 py-3 text-xs text-cyan-300/80 leading-relaxed cursor-pointer hover:bg-cyan-500/10 transition-colors"
+          >
+            💡 Use the large map on the right to draw your bounding box.
           </div>
         </section>
 
@@ -384,46 +399,89 @@ function App() {
 
       </div>
 
-      {/* --- RIGHT PANEL: RESULTS DISPLAY --- */ }
-      <div className="flex-1 flex flex-col relative bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] bg-black/40 border border-white/10 rounded-2xl overflow-y-auto custom-scrollbar p-8 shadow-2xl">
+      {/* --- RIGHT PANEL: MAP + RESULTS --- */ }
+      <div className="flex-1 flex flex-col relative bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] bg-black/40 border border-white/10 rounded-2xl overflow-hidden p-6 shadow-2xl">
 
         <div className="absolute inset-0 pointer-events-none opacity-5 bg-[linear-gradient(rgba(255,255,255,0.1)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.1)_1px,transparent_1px)] bg-[size:40px_40px]"></div>
 
-        { resultImageUrl ? (
-          <div className="flex-1 rounded-2xl border border-white/10 bg-black/40 backdrop-blur-xl overflow-hidden shadow-[0_0_40px_rgba(0,0,0,0.5)] flex flex-col z-10 relative">
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3/4 h-3/4 bg-cyan-500/10 blur-[100px] pointer-events-none"></div>
+        {/* Tab bar */ }
+        <div className="flex gap-2 mb-4 shrink-0 z-10 relative">
+          <button
+            onClick={ () => setActiveTab('map') }
+            className={ `px-5 py-2.5 rounded-lg text-xs font-bold tracking-[0.2em] uppercase transition-all border ${activeTab === 'map'
+                ? 'bg-cyan-500/20 border-cyan-400 text-cyan-100 shadow-[0_0_15px_rgba(6,182,212,0.3)]'
+                : 'bg-black/40 border-white/10 text-gray-400 hover:text-gray-200 hover:border-white/30'
+              }` }
+          >
+            🗺️ Target Map
+          </button>
+          <button
+            onClick={ () => setActiveTab('result') }
+            disabled={ !resultImageUrl }
+            className={ `px-5 py-2.5 rounded-lg text-xs font-bold tracking-[0.2em] uppercase transition-all border disabled:opacity-40 disabled:cursor-not-allowed ${activeTab === 'result'
+                ? 'bg-emerald-500/20 border-emerald-400 text-emerald-100 shadow-[0_0_15px_rgba(16,185,129,0.3)]'
+                : 'bg-black/40 border-white/10 text-gray-400 hover:text-gray-200 hover:border-white/30'
+              }` }
+          >
+            🛰️ NDVI Output
+          </button>
+        </div>
 
-            <div className="bg-white/5 px-8 py-5 border-b border-white/5 flex justify-between items-center backdrop-blur-md">
-              <h2 className="text-white text-sm tracking-[0.2em] uppercase font-bold flex items-center gap-3">
-                <span className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_#10b981]"></span>
-                NDVI Output Generated
-              </h2>
+        {/* MAP PANEL (always mounted, hidden when not active) */ }
+        <div className={ `flex-1 min-h-0 rounded-2xl border border-white/10 overflow-hidden shadow-[0_0_40px_rgba(0,0,0,0.5)] z-10 relative ${activeTab === 'map' ? 'flex flex-col' : 'hidden'}` }>
+          <MapContainer center={ [45.85, 24.89] } zoom={ 5 } style={ { height: '100%', width: '100%', backgroundColor: '#fff' } } zoomControl={ true }>
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+            <MapFixer />
+            <MapResizeOnTab activeTab={ activeTab } />
+            <CustomRectangleDraw drawState={ drawState } onBboxChange={ handleBboxChange } onDrawEnd={ handleDrawEnd } />
+          </MapContainer>
+        </div>
 
-              <a
-                href={ resultImageUrl }
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center gap-2 bg-cyan-500/20 hover:bg-cyan-500/40 text-cyan-100 text-sm font-bold tracking-widest border border-cyan-400 hover:border-cyan-300 px-5 py-2.5 rounded-lg transition-all shadow-[0_0_10px_rgba(6,182,212,0.2)] hover:shadow-[0_0_20px_rgba(6,182,212,0.5)]"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={ 2 } d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                </svg>
-                EXPORT RAW
-              </a>
+        {/* RESULT PANEL */ }
+        <div className={ `flex-1 min-h-0 rounded-2xl border border-white/10 bg-black/40 backdrop-blur-xl overflow-hidden shadow-[0_0_40px_rgba(0,0,0,0.5)] z-10 relative ${activeTab === 'result' ? 'flex flex-col' : 'hidden'}` }>
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3/4 h-3/4 bg-cyan-500/10 blur-[100px] pointer-events-none"></div>
+
+          { resultImageUrl ? (
+            <>
+              <div className="bg-white/5 px-8 py-4 border-b border-white/5 flex justify-between items-center backdrop-blur-md shrink-0">
+                <h2 className="text-white text-sm tracking-[0.2em] uppercase font-bold flex items-center gap-3">
+                  <span className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_#10b981]"></span>
+                  NDVI Output Generated
+                </h2>
+
+                <a
+                  href={ resultImageUrl }
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-2 bg-cyan-500/20 hover:bg-cyan-500/40 text-cyan-100 text-sm font-bold tracking-widest border border-cyan-400 hover:border-cyan-300 px-5 py-2.5 rounded-lg transition-all shadow-[0_0_10px_rgba(6,182,212,0.2)] hover:shadow-[0_0_20px_rgba(6,182,212,0.5)]"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={ 2 } d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  EXPORT RAW
+                </a>
+              </div>
+              <div className="flex-1 min-h-0 flex items-center justify-center p-4 relative z-10">
+                <img
+                  src={ resultImageUrl }
+                  alt="Processed NDVI"
+                  className="max-w-full max-h-full w-auto h-auto object-contain rounded-xl shadow-2xl border border-white/10"
+                />
+              </div>
+            </>
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center text-gray-400">
+              <div className="relative mb-8">
+                <div className="absolute inset-0 bg-cyan-500/20 blur-2xl rounded-full animate-pulse"></div>
+                <div className="text-7xl opacity-50 relative z-10 drop-shadow-lg">🛰️</div>
+              </div>
+              <p className="text-sm tracking-[0.4em] uppercase text-gray-500 font-bold">Awaiting Telemetry</p>
             </div>
-            <div className="flex-1 flex items-center justify-center p-8 relative z-10">
-              <img src={ resultImageUrl } alt="Processed NDVI" className="max-w-full max-h-full object-contain rounded-xl shadow-2xl border border-white/10" />
-            </div>
-          </div>
-        ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-gray-400 border border-white/5 rounded-2xl bg-black/40 backdrop-blur-sm z-10">
-            <div className="relative mb-8">
-              <div className="absolute inset-0 bg-cyan-500/20 blur-2xl rounded-full animate-pulse"></div>
-              <div className="text-7xl opacity-50 relative z-10 drop-shadow-lg">🛰️</div>
-            </div>
-            <p className="text-sm tracking-[0.4em] uppercase text-gray-500 font-bold">Awaiting Telemetry</p>
-          </div>
-        ) }
+          ) }
+        </div>
       </div>
     </div>
   )
