@@ -7,6 +7,7 @@ from azure.storage.blob import generate_blob_sas, BlobSasPermissions, BlobServic
 import os
 import logging
 from typing import Dict
+import hashlib
 
 class ConnectionManager:
     def __init__(self):
@@ -29,13 +30,14 @@ manager = ConnectionManager()
 
 
 app = FastAPI(title="Sentinel Hub Processing API")
-# Allow the frontend to talk to the backend
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:8000")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # Typically we would restrict this to actual frontend IP/domain, but for now we keep it to allow all
+    allow_origins=[FRONTEND_URL],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 logging.basicConfig(level=logging.INFO)
 
@@ -89,7 +91,7 @@ def get_secure_image_url(blob_name: str) -> str:
         blob_name=blob_name,
         account_key=account_key,
         permission=BlobSasPermissions(read=True),
-        expiry=datetime.now(timezone.utc) + timedelta(minutes=15) 
+        expiry=datetime.now(timezone.utc) + timedelta(minutes=2) 
     )
     
     return f"https://{account_name}.blob.core.windows.net/{CONTAINER_NAME}/{blob_name}?{sas_token}"
@@ -98,18 +100,45 @@ def get_secure_image_url(blob_name: str) -> str:
 async def process_ndvi_via_sentinel_hub(stac_item_id: str, bbox: list, client_id: str):
     logging.info(f"Starting Sentinel Hub job for {stac_item_id}")
     try:
+        # 1. GENERATE THE HASH (Anti-Cloning)
+        unique_string = f"{stac_item_id}_{bbox}"
+        bbox_hash = hashlib.md5(unique_string.encode()).hexdigest()
+        blob_name = f"ndvi_{bbox_hash}.png"
+
+        # 2. CHECK THE CACHE
+        blob_service_client = BlobServiceClient.from_connection_string(AZURE_STORAGE_CONNECTION_STRING)
+        blob_client = blob_service_client.get_blob_client(container=CONTAINER_NAME, blob=blob_name)
+        
+        # If the container doesn't exist yet, we catch it gracefully
+        try:
+            if blob_client.exists():
+                logging.info("Image already exists! Serving directly from cache.")
+                secure_url = get_secure_image_url(blob_name)
+                
+                # Send the cached image back to the frontend and exit!
+                await manager.send_message({
+                    "status": "completed",
+                    "image_url": secure_url
+                }, client_id)
+                return 
+        except Exception as cache_error:
+            logging.warning(f"Cache check failed (Container might be missing): {cache_error}")
+
+        # 3. IF NOT CACHED, CALL COPERNICUS
+        logging.info("Image not cached. Asking Sentinel Hub to calculate NDVI...")
+
         token = get_copernicus_token()
         headers = {"Authorization": f"Bearer {token}", "Accept": "image/png"}
 
-        # 1. Get the Date from the STAC API
+        # 4. Get the Date from the STAC API
         stac_url = f"https://stac.dataspace.copernicus.eu/v1/collections/sentinel-2-l2a/items/{stac_item_id}"
         stac_data = requests.get(stac_url).json()
         date_str = stac_data['properties']['datetime'][:10]
         
-        # 2. Calculate image size based on the user's drawn box
+        # 5. Calculate image size based on the user's drawn box
         width, height = calculate_image_dimensions(bbox, max_pixels=2048)
 
-        # 3. The Evalscript: This JavaScript runs on Copernicus servers
+        # 6. The Evalscript: This JavaScript runs on Copernicus servers
         evalscript = """
         //VERSION=3
         function setup() {
@@ -130,7 +159,7 @@ async def process_ndvi_via_sentinel_hub(stac_item_id: str, bbox: list, client_id
         }
         """
 
-        # 4. Build the Sentinel Hub Process API Payload
+        # 7. Build the Sentinel Hub Process API Payload
         process_payload = {
             "input": {
                 "bounds": {
@@ -165,7 +194,7 @@ async def process_ndvi_via_sentinel_hub(stac_item_id: str, bbox: list, client_id
             "evalscript": evalscript
         }
 
-        # 5. Trigger the Process API
+        # 8. Trigger the Process API
         logging.info("Asking Sentinel Hub to calculate NDVI...")
         process_url = "https://sh.dataspace.copernicus.eu/api/v1/process"
         response = requests.post(process_url, headers=headers, json=process_payload)
@@ -173,16 +202,13 @@ async def process_ndvi_via_sentinel_hub(stac_item_id: str, bbox: list, client_id
         if not response.ok:
             raise Exception(f"Sentinel Hub Error: {response.text}")
 
-        # 6. Upload the resulting PNG to Azure Blob Storage
+        # 9. Upload the resulting PNG to Azure Blob Storage
         logging.info("Calculation complete. Uploading PNG to Azure...")
         blob_service_client = BlobServiceClient.from_connection_string(AZURE_STORAGE_CONNECTION_STRING)
         container_client = blob_service_client.get_container_client(CONTAINER_NAME)
         
         if not container_client.exists():
             container_client.create_container()
-
-        blob_name = f"{stac_item_id}_NDVI.png"
-        blob_client = blob_service_client.get_blob_client(container=CONTAINER_NAME, blob=blob_name)
         
         # Upload the raw bytes from the API response
         blob_client.upload_blob(response.content, overwrite=True, blob_type="BlockBlob")
@@ -201,7 +227,6 @@ async def process_ndvi_via_sentinel_hub(stac_item_id: str, bbox: list, client_id
             "error": str(e)
         }, client_id)
 
-
 @app.post("/process")
 async def start_processing_job(request: ProcessRequest, background_tasks: BackgroundTasks):
     background_tasks.add_task(
@@ -211,7 +236,8 @@ async def start_processing_job(request: ProcessRequest, background_tasks: Backgr
         request.client_id
     )
 
-    return {"message": "Sentinel Hub Job accepted.", "stac_item_id": request.stac_item_id}
+    # Respond to the frontend instantly
+    return {"message": "Sentinel Hub Job accepted.", "status": "processing"}
 
 
 @app.websocket("/ws/{client_id}")

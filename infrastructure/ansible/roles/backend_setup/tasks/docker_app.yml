@@ -1,5 +1,4 @@
 ---
-
 - name: Install Docker and Docker Compose
   ansible.builtin.apt:
     name:
@@ -24,14 +23,14 @@
 
 - name: Copy processor directory to VM
   ansible.builtin.copy:
-    src: "/home/ioan/facultate/AEIS-project/backend/processor"
+    src: "/home/ioan/facultate/aeis/AEIS-project/backend/processor"
     dest: /home/vmadmin/app/backend/
     owner: vmadmin
     group: vmadmin
 
 - name: Copy docker-compose.yml to VM
   ansible.builtin.copy:
-    src: "/home/ioan/facultate/AEIS-project/backend/docker-compose.yml"
+    src: "/home/ioan/facultate/aeis/AEIS-project/backend/docker-compose.yml"
     dest: /home/vmadmin/app/backend/docker-compose.yml
     owner: vmadmin
     group: vmadmin
